@@ -277,3 +277,34 @@ unrealistic. But it means an eval score here says more about "finds and follows
 the right runbook" than about independent diagnosis. The eval report will state
 this. An ablation that strips the suggested-action lines would measure the
 difference; it is not built yet.
+
+### Streaming in the CLI
+
+The runner streams `stream_mode=["updates", "custom"]` with `version="v2"` and
+`subgraphs=True`. Nodes send progress events (`route`, `tool_call`, `finding`,
+`proposal`, `decision`, `executed`) through `get_stream_writer()`, and the CLI prints
+one line per event. Root-level `updates` fill in the nodes that send no events
+(intake, report, and the interrupt).
+
+`subgraphs=True` is required, not cosmetic. The specialist subgraphs are invoked
+inside a node function, and with `subgraphs=False` their custom events are dropped
+silently: no error, and no event reaches the parent stream. A probe against 1.2.12
+showed the parent's own custom event arriving without the subgraph's. With
+`subgraphs=True` the subgraph's event arrives with `ns=("<node>:<task id>",)`. The
+streaming page does say `subgraphs=True` includes subgraph output; what it does not
+say is that leaving it off loses custom events without any warning.
+
+### CLI shape
+
+- `triage run` exits at the approval gate and prints the exact `triage resume`
+  commands. The pause is a durable state, not a blocked process, so a decision can
+  come hours later from another shell.
+- `triage run --wait` prompts on stdin instead. The crash test uses this mode: it
+  SIGKILLs the real CLI while it waits for input, then resumes with
+  `triage resume` in a new process.
+- The CLI rejects an `--edit` to an action outside the allow-list before resuming,
+  with exit code 2, so a typo doesn't permanently refuse the incident. The approval
+  node still fails closed if a bad edit reaches it through the API.
+- The graph records which model produced the findings (`state["model"]`). The report
+  labels token counts as estimates for the fake model, and stays correct if the run
+  is resumed under a different provider.
