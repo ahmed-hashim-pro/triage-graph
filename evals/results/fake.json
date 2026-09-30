@@ -1,8 +1,8 @@
 {
   "model": "fake",
-  "started_at": "2026-09-30T21:10:19+00:00",
-  "runs_per_cell": 3,
-  "requested_runs": 3,
+  "started_at": "2026-09-30T22:37:44+00:00",
+  "runs_per_cell": 6,
+  "requested_runs": 6,
   "scenarios": [
     "error-spike-after-deploy",
     "high-latency",
@@ -29,7 +29,7 @@
       "model_calls": 12,
       "input_tokens": 8613,
       "output_tokens": 684,
-      "seconds": 0.03566025011241436,
+      "seconds": 0.02041120920330286,
       "error": null
     },
     {
@@ -45,7 +45,7 @@
       "model_calls": 12,
       "input_tokens": 8520,
       "output_tokens": 674,
-      "seconds": 0.019510708283632994,
+      "seconds": 0.02049441635608673,
       "error": null
     },
     {
@@ -61,7 +61,7 @@
       "model_calls": 12,
       "input_tokens": 9536,
       "output_tokens": 747,
-      "seconds": 0.018252457957714796,
+      "seconds": 0.018966292031109333,
       "error": null
     },
     {
@@ -77,7 +77,7 @@
       "model_calls": 12,
       "input_tokens": 9449,
       "output_tokens": 739,
-      "seconds": 0.01755675021559,
+      "seconds": 0.017819624859839678,
       "error": null
     },
     {
@@ -93,7 +93,7 @@
       "model_calls": 12,
       "input_tokens": 8853,
       "output_tokens": 705,
-      "seconds": 0.017167750280350447,
+      "seconds": 0.01853541610762477,
       "error": null
     },
     {
@@ -109,7 +109,7 @@
       "model_calls": 12,
       "input_tokens": 8790,
       "output_tokens": 697,
-      "seconds": 0.0181020419113338,
+      "seconds": 0.018186917062848806,
       "error": null
     },
     {
@@ -125,7 +125,7 @@
       "model_calls": 12,
       "input_tokens": 8688,
       "output_tokens": 721,
-      "seconds": 0.01725395815446973,
+      "seconds": 0.018088167067617178,
       "error": null
     },
     {
@@ -141,7 +141,7 @@
       "model_calls": 12,
       "input_tokens": 8596,
       "output_tokens": 711,
-      "seconds": 0.01871225005015731,
+      "seconds": 0.019313250202685595,
       "error": null
     },
     {
@@ -157,7 +157,7 @@
       "model_calls": 12,
       "input_tokens": 8613,
       "output_tokens": 684,
-      "seconds": 0.01960720820352435,
+      "seconds": 0.02707429090514779,
       "error": null
     },
     {
@@ -173,7 +173,7 @@
       "model_calls": 12,
       "input_tokens": 8520,
       "output_tokens": 674,
-      "seconds": 0.02021683380007744,
+      "seconds": 0.032420875038951635,
       "error": null
     },
     {
@@ -189,7 +189,7 @@
       "model_calls": 12,
       "input_tokens": 9536,
       "output_tokens": 747,
-      "seconds": 0.017622874584048986,
+      "seconds": 0.026793417055159807,
       "error": null
     },
     {
@@ -205,7 +205,7 @@
       "model_calls": 12,
       "input_tokens": 9449,
       "output_tokens": 739,
-      "seconds": 0.017410083208233118,
+      "seconds": 0.02985495887696743,
       "error": null
     },
     {
@@ -221,7 +221,7 @@
       "model_calls": 12,
       "input_tokens": 8853,
       "output_tokens": 705,
-      "seconds": 0.01855791686102748,
+      "seconds": 0.01974937506020069,
       "error": null
     },
     {
@@ -237,7 +237,7 @@
       "model_calls": 12,
       "input_tokens": 8790,
       "output_tokens": 697,
-      "seconds": 0.01828829199075699,
+      "seconds": 0.01852166699245572,
       "error": null
     },
     {
@@ -253,7 +253,7 @@
       "model_calls": 12,
       "input_tokens": 8688,
       "output_tokens": 721,
-      "seconds": 0.018355207983404398,
+      "seconds": 0.018910249695181847,
       "error": null
     },
     {
@@ -269,7 +269,7 @@
       "model_calls": 12,
       "input_tokens": 8596,
       "output_tokens": 711,
-      "seconds": 0.017509874887764454,
+      "seconds": 0.01817283406853676,
       "error": null
     },
     {
@@ -285,7 +285,7 @@
       "model_calls": 12,
       "input_tokens": 8613,
       "output_tokens": 684,
-      "seconds": 0.019432042259722948,
+      "seconds": 0.019592500291764736,
       "error": null
     },
     {
@@ -301,7 +301,7 @@
       "model_calls": 12,
       "input_tokens": 8520,
       "output_tokens": 674,
-      "seconds": 0.01979241706430912,
+      "seconds": 0.02132554119452834,
       "error": null
     },
     {
@@ -317,7 +317,7 @@
       "model_calls": 12,
       "input_tokens": 9536,
       "output_tokens": 747,
-      "seconds": 0.018032874912023544,
+      "seconds": 0.01986062480136752,
       "error": null
     },
     {
@@ -333,7 +333,7 @@
       "model_calls": 12,
       "input_tokens": 9449,
       "output_tokens": 739,
-      "seconds": 0.01855820929631591,
+      "seconds": 0.019006292335689068,
       "error": null
     },
     {
@@ -349,7 +349,7 @@
       "model_calls": 12,
       "input_tokens": 8853,
       "output_tokens": 705,
-      "seconds": 0.0178014999255538,
+      "seconds": 0.018521917052567005,
       "error": null
     },
     {
@@ -365,7 +365,7 @@
       "model_calls": 12,
       "input_tokens": 8790,
       "output_tokens": 697,
-      "seconds": 0.019331040792167187,
+      "seconds": 0.0184667082503438,
       "error": null
     },
     {
@@ -381,7 +381,7 @@
       "model_calls": 12,
       "input_tokens": 8688,
       "output_tokens": 721,
-      "seconds": 0.017303542234003544,
+      "seconds": 0.01881395885720849,
       "error": null
     },
     {
@@ -397,7 +397,391 @@
       "model_calls": 12,
       "input_tokens": 8596,
       "output_tokens": 711,
-      "seconds": 0.017246500123292208,
+      "seconds": 0.018693250138312578,
+      "error": null
+    },
+    {
+      "scenario": "error-spike-after-deploy",
+      "variant": "with-suggestions",
+      "run": 4,
+      "expected": "rollback_deploy",
+      "proposed": "rollback_deploy",
+      "matched": true,
+      "outcome": "proposed",
+      "refused_action": null,
+      "steps": 3,
+      "model_calls": 12,
+      "input_tokens": 8613,
+      "output_tokens": 684,
+      "seconds": 0.020602290984243155,
+      "error": null
+    },
+    {
+      "scenario": "error-spike-after-deploy",
+      "variant": "suggestions-hidden",
+      "run": 4,
+      "expected": "rollback_deploy",
+      "proposed": "rollback_deploy",
+      "matched": true,
+      "outcome": "proposed",
+      "refused_action": null,
+      "steps": 3,
+      "model_calls": 12,
+      "input_tokens": 8520,
+      "output_tokens": 674,
+      "seconds": 0.020167790818959475,
+      "error": null
+    },
+    {
+      "scenario": "high-latency",
+      "variant": "with-suggestions",
+      "run": 4,
+      "expected": "scale_up",
+      "proposed": "scale_up",
+      "matched": true,
+      "outcome": "proposed",
+      "refused_action": null,
+      "steps": 3,
+      "model_calls": 12,
+      "input_tokens": 9536,
+      "output_tokens": 747,
+      "seconds": 0.019331499934196472,
+      "error": null
+    },
+    {
+      "scenario": "high-latency",
+      "variant": "suggestions-hidden",
+      "run": 4,
+      "expected": "scale_up",
+      "proposed": "scale_up",
+      "matched": true,
+      "outcome": "proposed",
+      "refused_action": null,
+      "steps": 3,
+      "model_calls": 12,
+      "input_tokens": 9449,
+      "output_tokens": 739,
+      "seconds": 0.01851645903661847,
+      "error": null
+    },
+    {
+      "scenario": "intermittent-5xx",
+      "variant": "with-suggestions",
+      "run": 4,
+      "expected": "page_human",
+      "proposed": "page_human",
+      "matched": true,
+      "outcome": "proposed",
+      "refused_action": null,
+      "steps": 3,
+      "model_calls": 12,
+      "input_tokens": 8853,
+      "output_tokens": 705,
+      "seconds": 0.018793083261698484,
+      "error": null
+    },
+    {
+      "scenario": "intermittent-5xx",
+      "variant": "suggestions-hidden",
+      "run": 4,
+      "expected": "page_human",
+      "proposed": "page_human",
+      "matched": true,
+      "outcome": "proposed",
+      "refused_action": null,
+      "steps": 3,
+      "model_calls": 12,
+      "input_tokens": 8790,
+      "output_tokens": 697,
+      "seconds": 0.01946158381178975,
+      "error": null
+    },
+    {
+      "scenario": "memory-leak",
+      "variant": "with-suggestions",
+      "run": 4,
+      "expected": "restart_service",
+      "proposed": "restart_service",
+      "matched": true,
+      "outcome": "proposed",
+      "refused_action": null,
+      "steps": 3,
+      "model_calls": 12,
+      "input_tokens": 8688,
+      "output_tokens": 721,
+      "seconds": 0.020112707745283842,
+      "error": null
+    },
+    {
+      "scenario": "memory-leak",
+      "variant": "suggestions-hidden",
+      "run": 4,
+      "expected": "restart_service",
+      "proposed": "restart_service",
+      "matched": true,
+      "outcome": "proposed",
+      "refused_action": null,
+      "steps": 3,
+      "model_calls": 12,
+      "input_tokens": 8596,
+      "output_tokens": 711,
+      "seconds": 0.038594833109527826,
+      "error": null
+    },
+    {
+      "scenario": "error-spike-after-deploy",
+      "variant": "with-suggestions",
+      "run": 5,
+      "expected": "rollback_deploy",
+      "proposed": "rollback_deploy",
+      "matched": true,
+      "outcome": "proposed",
+      "refused_action": null,
+      "steps": 3,
+      "model_calls": 12,
+      "input_tokens": 8613,
+      "output_tokens": 684,
+      "seconds": 0.019335125107318163,
+      "error": null
+    },
+    {
+      "scenario": "error-spike-after-deploy",
+      "variant": "suggestions-hidden",
+      "run": 5,
+      "expected": "rollback_deploy",
+      "proposed": "rollback_deploy",
+      "matched": true,
+      "outcome": "proposed",
+      "refused_action": null,
+      "steps": 3,
+      "model_calls": 12,
+      "input_tokens": 8520,
+      "output_tokens": 674,
+      "seconds": 0.021113541908562183,
+      "error": null
+    },
+    {
+      "scenario": "high-latency",
+      "variant": "with-suggestions",
+      "run": 5,
+      "expected": "scale_up",
+      "proposed": "scale_up",
+      "matched": true,
+      "outcome": "proposed",
+      "refused_action": null,
+      "steps": 3,
+      "model_calls": 12,
+      "input_tokens": 9536,
+      "output_tokens": 747,
+      "seconds": 0.018568833824247122,
+      "error": null
+    },
+    {
+      "scenario": "high-latency",
+      "variant": "suggestions-hidden",
+      "run": 5,
+      "expected": "scale_up",
+      "proposed": "scale_up",
+      "matched": true,
+      "outcome": "proposed",
+      "refused_action": null,
+      "steps": 3,
+      "model_calls": 12,
+      "input_tokens": 9449,
+      "output_tokens": 739,
+      "seconds": 0.01946158381178975,
+      "error": null
+    },
+    {
+      "scenario": "intermittent-5xx",
+      "variant": "with-suggestions",
+      "run": 5,
+      "expected": "page_human",
+      "proposed": "page_human",
+      "matched": true,
+      "outcome": "proposed",
+      "refused_action": null,
+      "steps": 3,
+      "model_calls": 12,
+      "input_tokens": 8853,
+      "output_tokens": 705,
+      "seconds": 0.019337499979883432,
+      "error": null
+    },
+    {
+      "scenario": "intermittent-5xx",
+      "variant": "suggestions-hidden",
+      "run": 5,
+      "expected": "page_human",
+      "proposed": "page_human",
+      "matched": true,
+      "outcome": "proposed",
+      "refused_action": null,
+      "steps": 3,
+      "model_calls": 12,
+      "input_tokens": 8790,
+      "output_tokens": 697,
+      "seconds": 0.018402290996164083,
+      "error": null
+    },
+    {
+      "scenario": "memory-leak",
+      "variant": "with-suggestions",
+      "run": 5,
+      "expected": "restart_service",
+      "proposed": "restart_service",
+      "matched": true,
+      "outcome": "proposed",
+      "refused_action": null,
+      "steps": 3,
+      "model_calls": 12,
+      "input_tokens": 8688,
+      "output_tokens": 721,
+      "seconds": 0.01922695804387331,
+      "error": null
+    },
+    {
+      "scenario": "memory-leak",
+      "variant": "suggestions-hidden",
+      "run": 5,
+      "expected": "restart_service",
+      "proposed": "restart_service",
+      "matched": true,
+      "outcome": "proposed",
+      "refused_action": null,
+      "steps": 3,
+      "model_calls": 12,
+      "input_tokens": 8596,
+      "output_tokens": 711,
+      "seconds": 0.018592999782413244,
+      "error": null
+    },
+    {
+      "scenario": "error-spike-after-deploy",
+      "variant": "with-suggestions",
+      "run": 6,
+      "expected": "rollback_deploy",
+      "proposed": "rollback_deploy",
+      "matched": true,
+      "outcome": "proposed",
+      "refused_action": null,
+      "steps": 3,
+      "model_calls": 12,
+      "input_tokens": 8613,
+      "output_tokens": 684,
+      "seconds": 0.020456334110349417,
+      "error": null
+    },
+    {
+      "scenario": "error-spike-after-deploy",
+      "variant": "suggestions-hidden",
+      "run": 6,
+      "expected": "rollback_deploy",
+      "proposed": "rollback_deploy",
+      "matched": true,
+      "outcome": "proposed",
+      "refused_action": null,
+      "steps": 3,
+      "model_calls": 12,
+      "input_tokens": 8520,
+      "output_tokens": 674,
+      "seconds": 0.019624958746135235,
+      "error": null
+    },
+    {
+      "scenario": "high-latency",
+      "variant": "with-suggestions",
+      "run": 6,
+      "expected": "scale_up",
+      "proposed": "scale_up",
+      "matched": true,
+      "outcome": "proposed",
+      "refused_action": null,
+      "steps": 3,
+      "model_calls": 12,
+      "input_tokens": 9536,
+      "output_tokens": 747,
+      "seconds": 0.017993208952248096,
+      "error": null
+    },
+    {
+      "scenario": "high-latency",
+      "variant": "suggestions-hidden",
+      "run": 6,
+      "expected": "scale_up",
+      "proposed": "scale_up",
+      "matched": true,
+      "outcome": "proposed",
+      "refused_action": null,
+      "steps": 3,
+      "model_calls": 12,
+      "input_tokens": 9449,
+      "output_tokens": 739,
+      "seconds": 0.019057916942983866,
+      "error": null
+    },
+    {
+      "scenario": "intermittent-5xx",
+      "variant": "with-suggestions",
+      "run": 6,
+      "expected": "page_human",
+      "proposed": "page_human",
+      "matched": true,
+      "outcome": "proposed",
+      "refused_action": null,
+      "steps": 3,
+      "model_calls": 12,
+      "input_tokens": 8853,
+      "output_tokens": 705,
+      "seconds": 0.020069084130227566,
+      "error": null
+    },
+    {
+      "scenario": "intermittent-5xx",
+      "variant": "suggestions-hidden",
+      "run": 6,
+      "expected": "page_human",
+      "proposed": "page_human",
+      "matched": true,
+      "outcome": "proposed",
+      "refused_action": null,
+      "steps": 3,
+      "model_calls": 12,
+      "input_tokens": 8790,
+      "output_tokens": 697,
+      "seconds": 0.019669957924634218,
+      "error": null
+    },
+    {
+      "scenario": "memory-leak",
+      "variant": "with-suggestions",
+      "run": 6,
+      "expected": "restart_service",
+      "proposed": "restart_service",
+      "matched": true,
+      "outcome": "proposed",
+      "refused_action": null,
+      "steps": 3,
+      "model_calls": 12,
+      "input_tokens": 8688,
+      "output_tokens": 721,
+      "seconds": 0.018597499933093786,
+      "error": null
+    },
+    {
+      "scenario": "memory-leak",
+      "variant": "suggestions-hidden",
+      "run": 6,
+      "expected": "restart_service",
+      "proposed": "restart_service",
+      "matched": true,
+      "outcome": "proposed",
+      "refused_action": null,
+      "steps": 3,
+      "model_calls": 12,
+      "input_tokens": 8596,
+      "output_tokens": 711,
+      "seconds": 0.0191989173181355,
       "error": null
     }
   ]

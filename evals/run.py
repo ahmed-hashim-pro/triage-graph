@@ -32,14 +32,19 @@ from evals.harness import (
 from triage_graph.llm import describe_model, make_model
 
 RESULTS = Path(__file__).with_name("results")
+# Six runs per scenario and variant fit the default $2 cap on this model; see DECISIONS.md.
+EVAL_DEFAULT_MODEL = "claude-haiku-4-5"
 
 
 def parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(prog="python -m evals.run", description=__doc__)
     parser.add_argument("--provider", help="fake (default) or anthropic; overrides TRIAGE_PROVIDER")
-    parser.add_argument("--model", help="overrides TRIAGE_MODEL")
+    parser.add_argument(
+        "--model",
+        help=f"real-provider model; overrides TRIAGE_MODEL (default: {EVAL_DEFAULT_MODEL})",
+    )
     parser.add_argument("--effort", help="low, medium, high, xhigh or max; model default if unset")
-    parser.add_argument("--runs", type=int, default=3, help="runs per scenario and variant")
+    parser.add_argument("--runs", type=int, default=6, help="runs per scenario and variant")
     parser.add_argument("--budget-usd", type=float, default=2.0, help="hard spending cap")
     parser.add_argument("--max-tokens", type=int, default=8000, help="per model call")
     parser.add_argument("--scenarios", help="comma-separated subset (default: all)")
@@ -65,7 +70,8 @@ def main(argv: list[str] | None = None) -> int:
         print(f"error: unknown scenario or variant: {', '.join(unknown)}", file=sys.stderr)
         return 2
 
-    model = make_model(provider, args.model, effort=args.effort, max_tokens=args.max_tokens)
+    model_name = args.model or os.environ.get("TRIAGE_MODEL") or EVAL_DEFAULT_MODEL
+    model = make_model(provider, model_name, effort=args.effort, max_tokens=args.max_tokens)
     label = describe_model(model)
     price: Price | None = None
     runs = args.runs

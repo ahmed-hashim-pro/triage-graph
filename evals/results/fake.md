@@ -1,9 +1,9 @@
 # Eval report: fake
 
-- Started: 2026-09-30T21:10:19+00:00
-- Runs per scenario and variant: 3
-- Runs completed: 24 of 24; errors: 0
-- Tokens in/out: 213,135/17,034 (chars / 4 estimates from the fake model, not real counts)
+- Started: 2026-09-30T22:37:44+00:00
+- Runs per scenario and variant: 6
+- Runs completed: 48 of 48; errors: 0
+- Tokens in/out: 426,270/34,068 (chars / 4 estimates from the fake model, not real counts)
 
 ## Read this first
 
@@ -16,11 +16,11 @@
 
 | Scenario | Expected | with-suggestions | suggestions-hidden |
 |---|---|---|---|
-| error-spike-after-deploy | rollback_deploy | 3/3 | 3/3 |
-| high-latency | scale_up | 3/3 | 3/3 |
-| intermittent-5xx | page_human | 3/3 | 3/3 |
-| memory-leak | restart_service | 3/3 | 3/3 |
-| **all** | | 12/12 (100%) | 12/12 (100%) |
+| error-spike-after-deploy | rollback_deploy | 6/6 | 6/6 |
+| high-latency | scale_up | 6/6 | 6/6 |
+| intermittent-5xx | page_human | 6/6 | 6/6 |
+| memory-leak | restart_service | 6/6 | 6/6 |
+| **all** | | 24/24 (100%) | 24/24 (100%) |
 
 ## Averages per run
 
@@ -61,3 +61,27 @@
 - intermittent-5xx / suggestions-hidden / run 3: page_human, match
 - memory-leak / with-suggestions / run 3: restart_service, match
 - memory-leak / suggestions-hidden / run 3: restart_service, match
+- error-spike-after-deploy / with-suggestions / run 4: rollback_deploy, match
+- error-spike-after-deploy / suggestions-hidden / run 4: rollback_deploy, match
+- high-latency / with-suggestions / run 4: scale_up, match
+- high-latency / suggestions-hidden / run 4: scale_up, match
+- intermittent-5xx / with-suggestions / run 4: page_human, match
+- intermittent-5xx / suggestions-hidden / run 4: page_human, match
+- memory-leak / with-suggestions / run 4: restart_service, match
+- memory-leak / suggestions-hidden / run 4: restart_service, match
+- error-spike-after-deploy / with-suggestions / run 5: rollback_deploy, match
+- error-spike-after-deploy / suggestions-hidden / run 5: rollback_deploy, match
+- high-latency / with-suggestions / run 5: scale_up, match
+- high-latency / suggestions-hidden / run 5: scale_up, match
+- intermittent-5xx / with-suggestions / run 5: page_human, match
+- intermittent-5xx / suggestions-hidden / run 5: page_human, match
+- memory-leak / with-suggestions / run 5: restart_service, match
+- memory-leak / suggestions-hidden / run 5: restart_service, match
+- error-spike-after-deploy / with-suggestions / run 6: rollback_deploy, match
+- error-spike-after-deploy / suggestions-hidden / run 6: rollback_deploy, match
+- high-latency / with-suggestions / run 6: scale_up, match
+- high-latency / suggestions-hidden / run 6: scale_up, match
+- intermittent-5xx / with-suggestions / run 6: page_human, match
+- intermittent-5xx / suggestions-hidden / run 6: page_human, match
+- memory-leak / with-suggestions / run 6: restart_service, match
+- memory-leak / suggestions-hidden / run 6: restart_service, match

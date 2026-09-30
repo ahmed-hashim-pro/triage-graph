@@ -1,5 +1,6 @@
 import json
 import os
+import re
 
 import pytest
 
@@ -108,7 +109,7 @@ def test_plan_is_cut_to_fit_the_budget():
 
 def test_results_files_never_contain_credentials(tmp_path, monkeypatch):
     pytest.importorskip("langchain_anthropic", reason="needs the anthropic extra")
-    sentinel = "sk-ant-api03-SENTINEL-must-not-be-written"
+    sentinel = "SENTINEL-api-key-value-must-not-be-written"
     monkeypatch.setenv("ANTHROPIC_API_KEY", sentinel)
     real = make_model("anthropic")
     fake = FakeTriageModel()
@@ -133,6 +134,31 @@ def test_provider_errors_are_recorded_not_raised():
     [record] = result.records
     assert (record.outcome, record.matched) == ("error", False)
     assert "TimeoutError: provider timed out" in record.error
+
+
+def test_real_model_eval_defaults_to_haiku_six_runs_within_the_cap(monkeypatch, capsys):
+    pytest.importorskip("langchain_anthropic", reason="needs the anthropic extra")
+    from evals.run import main
+
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.delenv("TRIAGE_MODEL", raising=False)
+    assert main(["--provider", "anthropic"]) == 1  # plans, then stops: no key
+    out = capsys.readouterr().out
+    assert "model:      anthropic:claude-haiku-4-5" in out
+    assert "runs:       6 per scenario and variant, 48 in total\n" in out
+    total = float(re.search(r"\$(\d+\.\d+) in total", out).group(1))
+    assert total <= 2.0
+
+
+def test_opus_is_still_available_with_fewer_runs(monkeypatch, capsys):
+    pytest.importorskip("langchain_anthropic", reason="needs the anthropic extra")
+    from evals.run import main
+
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    assert main(["--provider", "anthropic", "--model", "claude-opus-5-5", "--effort", "low"]) == 1
+    out = capsys.readouterr().out
+    assert "model:      anthropic:claude-opus-5-5" in out
+    assert "runs:       1 per scenario and variant, 8 in total (asked for 6)" in out
 
 
 @pytest.mark.real_model
