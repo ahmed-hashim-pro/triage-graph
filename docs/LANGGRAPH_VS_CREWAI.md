@@ -192,6 +192,9 @@ runs, then restores with `Crew.from_checkpoint` in a new process:
   built-in LLM classes and falls back to a generic `LLM(model="triage-fake")`, which
   resolved to OpenAI. Without an OpenAI key the resumed run failed; with one, it would
   have sent the prompts to OpenAI. Re-attaching the LLMs by hand after restore fixed it.
+  This fallback is deliberate: crewAI PR #6117 made it replace a crash. What I'd
+  change is that it happens silently; see
+  [`docs/upstream/crewai-restore-llm.md`](upstream/crewai-restore-llm.md).
 - **The `ConditionalTask` came back as a plain `Task` without its condition.** After a
   restore, the rule "don't propose after an escalation" would be gone.
 - The step-limit hook lives in the process, not in the checkpoint, so it would have
