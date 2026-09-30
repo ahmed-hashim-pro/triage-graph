@@ -15,13 +15,21 @@ def describe_model(model: BaseChatModel) -> str:
     if isinstance(model, FakeTriageModel):
         return "fake"
     name = getattr(model, "model", None) or getattr(model, "model_name", None) or "unknown"
-    return f"{model._llm_type}:{name}"
+    provider = {"anthropic-chat": "anthropic"}.get(model._llm_type, model._llm_type)
+    return f"{provider}:{name}"
 
 
-def make_model(provider: str | None = None, model: str | None = None) -> BaseChatModel:
+def make_model(
+    provider: str | None = None,
+    model: str | None = None,
+    *,
+    effort: str | None = None,
+    max_tokens: int = 16000,
+) -> BaseChatModel:
     """Build the chat model named by `provider`, or by TRIAGE_PROVIDER (default "fake").
 
-    TRIAGE_MODEL overrides the model name for real providers.
+    TRIAGE_MODEL overrides the model name and TRIAGE_EFFORT the reasoning effort for
+    real providers. Effort is only sent when set; some models reject it.
     """
     provider = (provider or os.environ.get("TRIAGE_PROVIDER") or "fake").lower()
     if provider == "fake":
@@ -33,9 +41,11 @@ def make_model(provider: str | None = None, model: str | None = None) -> BaseCha
             raise RuntimeError(
                 "TRIAGE_PROVIDER=anthropic needs the extra: uv sync --extra anthropic"
             ) from exc
+        effort = effort or os.environ.get("TRIAGE_EFFORT")
         # No temperature: the current Claude models reject sampling parameters.
         return ChatAnthropic(  # type: ignore[call-arg]
             model=model or os.environ.get("TRIAGE_MODEL") or DEFAULT_ANTHROPIC_MODEL,
-            max_tokens=16000,
+            max_tokens=max_tokens,
+            **({"effort": effort} if effort else {}),
         )
     raise ValueError(f"unknown TRIAGE_PROVIDER {provider!r}; expected 'fake' or 'anthropic'")

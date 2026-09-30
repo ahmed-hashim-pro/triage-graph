@@ -9,6 +9,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Literal
 
+from langchain_core.callbacks import BaseCallbackHandler
 from langgraph.checkpoint.sqlite import SqliteSaver
 from langgraph.graph.state import CompiledStateGraph
 from langgraph.types import Command
@@ -51,8 +52,11 @@ def _drive(
     thread_id: str,
     max_steps: int,
     on_part: Callable[[StreamPart], None] | None,
+    callbacks: list[BaseCallbackHandler] | None = None,
 ) -> RunResult:
     config = run_config(thread_id, max_steps)
+    if callbacks:
+        config["callbacks"] = callbacks
     # durability="sync": the checkpoint is on disk before stream() returns, so a
     # process killed while waiting for approval can always be resumed.
     for part in graph.stream(
@@ -86,8 +90,10 @@ def start(
     thread_id: str,
     max_steps: int = DEFAULT_MAX_STEPS,
     on_part: Callable[[StreamPart], None] | None = None,
+    callbacks: list[BaseCallbackHandler] | None = None,
 ) -> RunResult:
-    return _drive(graph, {"alert": alert, "max_steps": max_steps}, thread_id, max_steps, on_part)
+    graph_input = {"alert": alert, "max_steps": max_steps}
+    return _drive(graph, graph_input, thread_id, max_steps, on_part, callbacks)
 
 
 def resume(
