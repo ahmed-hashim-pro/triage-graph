@@ -7,11 +7,11 @@ from typing import Any
 
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage, ToolMessage
+from langchain_core.tools import BaseTool
 from langgraph.graph import END, START, MessagesState, StateGraph
 from langgraph.graph.state import CompiledStateGraph
 from langgraph.prebuilt import ToolNode, tools_condition
 
-from triage_graph.lc_tools import SPECIALIST_TOOLS
 from triage_graph.progress import emit
 from triage_graph.prompts import SPECIALIST_SYSTEM, specialist_message
 from triage_graph.schemas import Finding, Specialist, ToolCallRecord
@@ -38,9 +38,8 @@ def usage_of(messages: Sequence[BaseMessage]) -> dict[str, int]:
 
 
 def build_specialist(
-    name: Specialist, model: BaseChatModel, max_tool_rounds: int
+    name: Specialist, model: BaseChatModel, tools: list[BaseTool], max_tool_rounds: int
 ) -> CompiledStateGraph:
-    tools = SPECIALIST_TOOLS[name]
     with_tools = model.bind_tools(tools)
 
     def agent(state: SpecialistState) -> dict[str, Any]:
@@ -88,9 +87,9 @@ def finding_from(name: Specialist, focus: str, messages: Sequence[BaseMessage]) 
 
 
 def make_specialist_node(
-    name: Specialist, model: BaseChatModel, max_tool_rounds: int
+    name: Specialist, model: BaseChatModel, tools: list[BaseTool], max_tool_rounds: int
 ) -> Callable[[TriageState], dict[str, Any]]:
-    subgraph = build_specialist(name, model, max_tool_rounds)
+    subgraph = build_specialist(name, model, tools, max_tool_rounds)
 
     def node(state: TriageState) -> dict[str, Any]:
         focus = state.get("focus", "")

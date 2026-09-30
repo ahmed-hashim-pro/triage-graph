@@ -220,6 +220,7 @@ _STOPWORDS = frozenset(
     "this that when what which above below than".split()
 )
 _TOKEN = re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)*")
+_SUGGESTION_LINE = re.compile(r"^.*Suggested action:.*$\n?", re.MULTILINE)
 
 
 def _stem(token: str) -> str:
@@ -240,10 +241,14 @@ def search_runbooks(
     query: str,
     service: str | None = None,
     top_k: int = 3,
+    include_suggestions: bool = True,
 ) -> dict[str, Any]:
     """Rank runbook sections against `query` with TF-IDF; headings count double.
 
     With `service`, only that service's runbook and the general policy are searched.
+    With `include_suggestions=False`, the "Suggested action" lines are removed from
+    the returned text and no `suggested_action` field is returned (used by the eval's
+    ablation).
     """
     terms = set(_tokens(query))
     if not terms:
@@ -264,16 +269,18 @@ def search_runbooks(
             scored.append((score, section))
     scored.sort(key=lambda pair: (-pair[0], pair[1].file, pair[1].heading))
 
-    results = []
+    results: list[dict[str, Any]] = []
     for score, section in scored[:top_k]:
-        suggested = SUGGESTED_ACTION.search(section.text)
-        results.append(
-            {
-                "file": section.file,
-                "heading": section.heading,
-                "score": round(score, 2),
-                "suggested_action": suggested.group(1) if suggested else None,
-                "text": section.text,
-            }
-        )
+        result: dict[str, Any] = {
+            "file": section.file,
+            "heading": section.heading,
+            "score": round(score, 2),
+        }
+        if include_suggestions:
+            suggested = SUGGESTED_ACTION.search(section.text)
+            result["suggested_action"] = suggested.group(1) if suggested else None
+            result["text"] = section.text
+        else:
+            result["text"] = _SUGGESTION_LINE.sub("", section.text).strip()
+        results.append(result)
     return {"query": query, "service": service, "results": results}

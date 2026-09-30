@@ -14,6 +14,7 @@ from langgraph.types import Checkpointer
 
 from triage_graph.approval import approval, make_executor, route_after_approval
 from triage_graph.infra import DryRunInfra
+from triage_graph.lc_tools import specialist_tools
 from triage_graph.llm import describe_model
 from triage_graph.nodes import make_proposer, make_supervisor
 from triage_graph.report import report
@@ -51,17 +52,21 @@ def build_graph(
     checkpointer: Checkpointer = None,
     infra: DryRunInfra | None = None,
     max_tool_rounds: int = 4,
+    runbook_suggestions: bool = True,
 ) -> CompiledStateGraph:
     """Compile the triage graph.
 
     The approval step pauses with interrupt(), which needs a checkpointer; without
     one, an in-memory saver is used and nothing survives the process.
+    `runbook_suggestions=False` hides the runbooks' "Suggested action" lines from
+    every agent (an eval ablation).
     """
+    tools = specialist_tools(runbook_suggestions)
     graph = StateGraph(TriageState, input_schema=TriageInput)
     graph.add_node("intake", make_intake(describe_model(model)))
     graph.add_node("supervisor", make_supervisor(model))
     for name in SPECIALISTS:
-        graph.add_node(name, make_specialist_node(name, model, max_tool_rounds))
+        graph.add_node(name, make_specialist_node(name, model, tools[name], max_tool_rounds))
     graph.add_node("proposer", make_proposer(model))
     graph.add_node("approval", approval)
     graph.add_node("executor", make_executor(infra or DryRunInfra()))

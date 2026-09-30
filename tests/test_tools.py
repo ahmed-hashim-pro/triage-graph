@@ -98,3 +98,14 @@ def test_runbook_search_scoped_to_service_suggests_the_expected_action(scenario)
 def test_runbook_search_rejects_an_empty_query():
     with pytest.raises(ToolInputError):
         search_runbooks(load_runbooks(), "the of and")
+
+
+def test_runbook_search_can_hide_suggested_actions():
+    query = "payments-api 5xx error rate after deploy"
+    hidden = search_runbooks(load_runbooks(), query, "payments-api", include_suggestions=False)
+    shown = search_runbooks(load_runbooks(), query, "payments-api")
+    assert [r["heading"] for r in hidden["results"]] == [r["heading"] for r in shown["results"]]
+    for result in hidden["results"]:
+        assert "suggested_action" not in result
+        assert "Suggested action" not in result["text"]
+    assert "Roll back to the previous version" in hidden["results"][0]["text"]

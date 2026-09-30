@@ -67,18 +67,28 @@ def get_metric_series(
     return json.dumps(result)
 
 
-@tool
-def search_runbooks(query: str, service: str | None = None) -> str:
-    """Search the runbooks for sections relevant to `query`.
+def make_search_runbooks(include_suggestions: bool) -> BaseTool:
+    @tool("search_runbooks")
+    def search_runbooks(query: str, service: str | None = None) -> str:
+        """Search the runbooks for sections relevant to `query`.
 
-    Pass `service` to search only that service's runbook plus the general policy.
-    Each result includes the section text and its suggested action, if any.
-    """
-    return json.dumps(tools.search_runbooks(load_runbooks(), query, service))
+        Pass `service` to search only that service's runbook plus the general policy.
+        Each result includes the matching section's text.
+        """
+        result = tools.search_runbooks(
+            load_runbooks(), query, service, include_suggestions=include_suggestions
+        )
+        return json.dumps(result)
+
+    return search_runbooks
 
 
-SPECIALIST_TOOLS: dict[str, list[BaseTool]] = {
-    "log_investigator": [search_logs],
-    "metrics_investigator": [detect_metric_anomalies, get_metric_series],
-    "runbook_agent": [search_runbooks],
-}
+def specialist_tools(runbook_suggestions: bool = True) -> dict[str, list[BaseTool]]:
+    return {
+        "log_investigator": [search_logs],
+        "metrics_investigator": [detect_metric_anomalies, get_metric_series],
+        "runbook_agent": [make_search_runbooks(runbook_suggestions)],
+    }
+
+
+SPECIALIST_TOOLS = specialist_tools()

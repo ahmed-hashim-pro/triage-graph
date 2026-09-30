@@ -43,7 +43,7 @@ def _render_output(name: str, output: str) -> list[str]:
     if name == "search_runbooks":
         return [
             f"  - {r['file']} > {r['heading']} (score {r['score']}, "
-            f"suggests {r['suggested_action'] or 'nothing'})"
+            f"suggests {r.get('suggested_action') or 'nothing shown'})"
             for r in data["results"]
         ] or ["  - no matching sections"]
     if name == "get_metric_series":

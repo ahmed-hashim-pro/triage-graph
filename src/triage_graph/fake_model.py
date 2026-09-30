@@ -178,7 +178,7 @@ class FakeTriageModel(BaseChatModel):
         top = results[0]
         return AIMessage(
             f"best match: {top['file']} > {top['heading']} (score {top['score']}), "
-            f"suggested action: {top['suggested_action']}"
+            f"suggested action: {top.get('suggested_action', 'not shown')}"
         )
 
     def summarize(self, messages: Sequence[BaseMessage]) -> AIMessage:
@@ -204,7 +204,7 @@ class FakeTriageModel(BaseChatModel):
         deploys = [line for line in log_lines if DEPLOY.search(line)]
         ooms = [line for line in log_lines if "OutOfMemoryError" in line]
         runbook_hits = [r for out in outputs.get("search_runbooks", []) for r in out["results"]]
-        suggested = runbook_hits[0]["suggested_action"] if runbook_hits else None
+        suggested = runbook_hits[0].get("suggested_action") if runbook_hits else None
 
         candidates: dict[Action, str] = {}
         if deploys and "error_rate_pct" in anomalous:
