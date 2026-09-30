@@ -308,3 +308,81 @@ say is that leaving it off loses custom events without any warning.
 - The graph records which model produced the findings (`state["model"]`). The report
   labels token counts as estimates for the fake model, and stays correct if the run
   is resumed under a different provider.
+
+## Evals
+
+### What is measured
+
+`python -m evals.run` runs every scenario N times in two variants and records, per
+run: the proposed action (or `escalated` / `error`), whether it matches
+`fixtures/expected.json`, supervisor steps, model calls, and input/output tokens.
+A run ends at the approval gate; nothing is executed. Escalation at the step
+limit counts as a miss, even for the `page_human` scenario, because it is not a
+proposal. A cell whose runs disagree is marked **flaky** in the report, with the
+count of each answer. Runs are interleaved (run 1 of every cell, then run 2), so a
+budget stop leaves the cells with similar numbers of runs.
+
+### The runbook ablation
+
+The `suggestions-hidden` variant builds the graph with `runbook_suggestions=False`.
+The runbook tool then drops the `Suggested action:` lines and the
+`suggested_action` field before any agent sees them, so the runbook agent's
+summary and the raw evidence given to the proposer can't contain them. A test
+checks that no finding or supervisor note in that variant mentions the expected
+action. The section prose still describes the fix, so this is a partial ablation.
+The report says so.
+
+### Cost control for real-model runs
+
+- Before running, the script prints the plan and an estimate: tokens per run are
+  scaled up from a fake-model dry run, with an assumed number of output tokens per
+  call (thinking included) that depends on effort. The assumptions are constants
+  in `evals/harness.py`, and they are guesses.
+- The number of runs is cut so the estimate fits the budget (default $2.00). If
+  even one run per cell doesn't fit, the script refuses and says why.
+- A paid run asks for confirmation unless `--yes` is given.
+- `BudgetGuard`, a LangChain callback with `raise_error = True`, checks each model
+  call before it is sent. If the call's worst case (prompt characters / 2 plus a
+  tool-schema allowance as input, `max_tokens` as output) could take spend past
+  the cap, it raises and the eval stops. Spend is summed from the real
+  `usage_metadata` of each response at list price. A test shows the guard stopping
+  a run before the cap, and another shows it also sees the calls inside the
+  specialist subgraphs. Callbacks reach those calls through LangGraph's config
+  propagation; nothing passes them explicitly.
+
+At list prices (hard-coded from 2026-09-25, `PRICES` in `evals/harness.py`), the
+planner fits the following under $2 for four scenarios × two variants:
+
+| Model | Effort | Est. $/run | Runs per cell |
+|---|---|---|---|
+| claude-opus-5-5 | default (medium) | 0.29 | 0: refuses |
+| claude-opus-5-5 | low | 0.17 | 1 |
+| claude-sonnet-5-5 | low | 0.09 | 2 |
+| claude-haiku-4-5 | none (no thinking by default) | 0.04 | 6 |
+
+One run per cell cannot show flakiness; the report says that when N < 3.
+
+### Credentials
+
+- Only `ANTHROPIC_API_KEY`, read by `ChatAnthropic` from the environment, is used.
+  Nothing in this repo reads, stores or prints it. `ChatAnthropic` passes an empty
+  key when the variable is unset; whether the SDK then falls back to an
+  `ant auth login` profile was not checked, so the eval treats the variable as the
+  only credential.
+- Eval runs use the in-memory checkpointer. The only files written are the
+  report and a JSON of the records, both built field by field. A test sets a
+  sentinel key in the environment, writes results for a `ChatAnthropic` plan, and
+  checks that the sentinel is not in either file.
+
+### The real-model test needs an explicit opt-in
+
+`evals/test_evals.py::test_real_model_eval` is skipped unless both
+`ANTHROPIC_API_KEY` and `TRIAGE_EVAL_REAL=1` are set. This is one step stricter
+than "skipped when no key": a developer with the key exported for other work
+should not spend money by running `pytest`.
+
+### No real-model results are committed
+
+No API key was available while this was built, so the real-model eval was built
+and tested offline but never run. `evals/results/fake.md` is the fake-model report.
+It is there to show the format, and its 100% is by construction.
