@@ -52,7 +52,11 @@ ignore = ["ANN401", "SIM905"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests", "evals"]
+# crewai_port/ and evals/ live at the repo root, outside the installed package.
+pythonpath = ["."]
 addopts = "-ra"
+# CrewAI 1.15.23 triggers these from its own code for options this repo never sets.
+filterwarnings = ["ignore::DeprecationWarning:crewai.*"]
 markers = [
     "real_model: calls a real LLM provider; skipped without an API key",
 ]
