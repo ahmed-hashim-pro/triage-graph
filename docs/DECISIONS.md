@@ -105,23 +105,35 @@ the load-bearing claims:
    In 1.15.23 the signature is `call(messages, tools=None, callbacks=None,
    available_functions=None, from_task=None, from_agent=None,
    response_model=None)`. The only abstract method is `call`.
-6. **LangGraph's default recursion limit is neither 25 nor 1000.** The graph-api page
-   says: "Starting in version 1.0.6, the default recursion limit is set to 1000 steps."
-   In langgraph 1.2.12, `langgraph/_internal/_config.py` has
-   `DEFAULT_RECURSION_LIMIT = int(getenv("LANGGRAPH_DEFAULT_RECURSION_LIMIT", "10007"))`.
-   (`langchain_core` still defines its own `DEFAULT_RECURSION_LIMIT = 25`, which is where
-   the older "25" comes from.) Found when a test expecting a `GraphRecursionError` at
-   ~42 supersteps did not get one. **Consequence:** the framework limit is not a
-   practical guard against a looping supervisor, so the step limit is enforced in the
-   supervisor node itself, and `run_config()` sets `recursion_limit = 2 * max_steps + 10`
-   as a backstop that sits above it.
-7. **`Command(resume=None)` crashes.** In langgraph 1.2.12 it raises
-   `UnboundLocalError: cannot access local variable 'resume_is_map'`
-   (`langgraph/pregel/_loop.py`, around line 927). The thread stays paused, so nothing
-   is lost, but `None` cannot be passed through as a resume value. Reproduced with a
-   ten-line graph outside this project. **Workaround:** `runner.resume()` rejects `None`
-   with a clear error before calling LangGraph. Every other malformed payload reaches
-   the approval node, which fails closed.
+6. **The default recursion limit is 10007, not the documented 1000.**
+   - Docs: https://docs.langchain.com/oss/python/langgraph/graph-api, section
+     "Recursion limit" (line 1032 of the page's `.md` export, fetched 2026-09-30):
+     "Starting in version 1.0.6, the default recursion limit is set to 1000 steps."
+   - Source: `langgraph/_internal/_config.py`, line 32, in the installed
+     langgraph 1.2.12:
+     `DEFAULT_RECURSION_LIMIT = int(getenv("LANGGRAPH_DEFAULT_RECURSION_LIMIT", "10007"))`.
+     The same module applies it as the run default at line 335
+     (`recursion_limit=DEFAULT_RECURSION_LIMIT`).
+   - Runtime: a one-node graph that loops forever, invoked with no config and with
+     `LANGGRAPH_DEFAULT_RECURSION_LIMIT` unset, raises `GraphRecursionError: Recursion
+     limit of 10007 reached without hitting a stop condition.`
+
+   Found when a test expecting `GraphRecursionError` at about 42 supersteps did not
+   get one. **Consequence:** the framework limit is no practical guard against a
+   looping supervisor. The step limit is enforced in the supervisor node itself, and
+   `run_config()` sets `recursion_limit = 2 * max_steps + 10` as a backstop above it.
+7. **`Command(resume=None)` crashes with `UnboundLocalError`.** In langgraph 1.2.12,
+   `PregelLoop._first` (`langgraph/pregel/_loop.py`) assigns `resume_is_map` only
+   inside `if (resume := ...) is not None:` (line 904). Line 927 reads it anyway, so
+   `Command(resume=None)` and a bare `Command()` raise `UnboundLocalError` instead of the
+   `EmptyInputError` on line 928. The thread stays paused, so nothing is lost.
+   Reproduced with a standalone script on Python 3.11, 3.12 and 3.13. This is already
+   reported upstream as
+   [langchain-ai/langgraph#7034](https://github.com/langchain-ai/langgraph/issues/7034)
+   (open, fix PRs unmerged). A write-up for the maintainers is in
+   [`docs/upstream/resume-none.md`](upstream/resume-none.md). **Workaround:**
+   `runner.resume()` rejects `None` before calling LangGraph. Every other malformed
+   payload reaches the approval node, which fails closed.
 
 ## Design decisions
 
