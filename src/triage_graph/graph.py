@@ -1,0 +1,65 @@
+"""Graph wiring: a supervisor loop over three specialists, then a proposal and a report."""
+
+from __future__ import annotations
+
+from typing import Any
+
+from langchain_core.language_models import BaseChatModel
+from langchain_core.runnables import RunnableConfig
+from langgraph.graph import END, START, StateGraph
+from langgraph.graph.state import CompiledStateGraph
+from langgraph.types import Checkpointer
+
+from triage_graph.fake_model import FakeTriageModel
+from triage_graph.nodes import make_proposer, make_supervisor
+from triage_graph.report import make_report_node
+from triage_graph.schemas import SPECIALISTS, Alert
+from triage_graph.specialists import make_specialist_node
+from triage_graph.state import DEFAULT_MAX_STEPS, TriageInput, TriageState
+
+MAX_STEPS_CEILING = 20
+
+
+def intake(state: TriageState) -> dict[str, Any]:
+    alert = Alert.model_validate(state["alert"])
+    max_steps = state.get("max_steps", DEFAULT_MAX_STEPS)
+    if not isinstance(max_steps, int) or not 1 <= max_steps <= MAX_STEPS_CEILING:
+        raise ValueError(f"max_steps must be an integer from 1 to {MAX_STEPS_CEILING}")
+    return {"alert": alert.model_dump(mode="json"), "max_steps": max_steps, "steps": 0}
+
+
+def route_after_supervisor(state: TriageState) -> str:
+    target = state["next"]
+    return {"propose": "proposer", "escalate": "report", "retry": "supervisor"}.get(target, target)
+
+
+def build_graph(
+    model: BaseChatModel, *, checkpointer: Checkpointer = None, max_tool_rounds: int = 4
+) -> CompiledStateGraph:
+    graph = StateGraph(TriageState, input_schema=TriageInput)
+    graph.add_node("intake", intake)
+    graph.add_node("supervisor", make_supervisor(model))
+    for name in SPECIALISTS:
+        graph.add_node(name, make_specialist_node(name, model, max_tool_rounds))
+    graph.add_node("proposer", make_proposer(model))
+    graph.add_node("report", make_report_node(estimated_tokens=isinstance(model, FakeTriageModel)))
+
+    graph.add_edge(START, "intake")
+    graph.add_edge("intake", "supervisor")
+    graph.add_conditional_edges(
+        "supervisor", route_after_supervisor, [*SPECIALISTS, "supervisor", "proposer", "report"]
+    )
+    for name in SPECIALISTS:
+        graph.add_edge(name, "supervisor")
+    graph.add_edge("proposer", "report")
+    graph.add_edge("report", END)
+    return graph.compile(checkpointer=checkpointer)
+
+
+def run_config(thread_id: str, max_steps: int = DEFAULT_MAX_STEPS) -> RunnableConfig:
+    """Config for one run. The recursion limit sits above the supervisor's own step
+    limit so a stuck investigation ends as "escalated", not as GraphRecursionError."""
+    return {
+        "configurable": {"thread_id": thread_id},
+        "recursion_limit": 2 * max_steps + 10,
+    }

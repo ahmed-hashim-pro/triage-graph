@@ -105,6 +105,16 @@ the load-bearing claims:
    In 1.15.23 the signature is `call(messages, tools=None, callbacks=None,
    available_functions=None, from_task=None, from_agent=None,
    response_model=None)`. The only abstract method is `call`.
+6. **LangGraph's default recursion limit is neither 25 nor 1000.** The graph-api page
+   says: "Starting in version 1.0.6, the default recursion limit is set to 1000 steps."
+   In langgraph 1.2.12, `langgraph/_internal/_config.py` has
+   `DEFAULT_RECURSION_LIMIT = int(getenv("LANGGRAPH_DEFAULT_RECURSION_LIMIT", "10007"))`.
+   (`langchain_core` still defines its own `DEFAULT_RECURSION_LIMIT = 25`, which is where
+   the older "25" comes from.) Found when a test expecting a `GraphRecursionError` at
+   ~42 supersteps did not get one. **Consequence:** the framework limit is not a
+   practical guard against a looping supervisor, so the step limit is enforced in the
+   supervisor node itself, and `run_config()` sets `recursion_limit = 2 * max_steps + 10`
+   as a backstop that sits above it.
 
 ## Design decisions
 
@@ -153,3 +163,46 @@ then. `"sync"` makes that true by construction instead of relying on timing.
 `crewai==1.15.23` pulls in chromadb, the OpenAI SDK and many more packages. It is
 only needed for `crewai_port/`, so the core package and its tests do not
 depend on it.
+
+### Specialists are subgraphs called from a node, not shared-state subgraphs
+
+Each specialist is a compiled `StateGraph` (model node + `ToolNode`, routed by
+`tools_condition`) with its own `messages` channel. The parent calls it from a
+node function and keeps only a `Finding`: the final summary plus every tool call
+and its output. Tool chatter stays out of the parent state and the checkpoint,
+and the proposer sees raw tool output rather than only the specialists' summaries.
+
+A specialist gets `max_tool_rounds` (default 4) tool-calling turns. After that
+it is asked for its summary with the tools still bound (Anthropic rejects a
+history that contains `tool_use` blocks when no tools are defined) and any tool
+call in that reply is dropped.
+
+### Tool errors are split into "the model's fault" and "a bug"
+
+`ToolNode`'s default only reports argument-validation errors back to the model
+and re-raises everything else. The tools raise `ToolInputError` for bad input
+from the model (an unparseable timestamp, an unknown metric), and the node is
+built with `handle_tool_errors=(ToolInputError,)`. The model sees those and can
+retry. Any other exception still fails the run.
+
+### The step limit counts every non-final supervisor turn
+
+A turn that dispatches a specialist, or that fails to produce a valid `route`
+call, uses one step. When `steps >= max_steps`, the supervisor stops without
+calling the model. It sets `outcome="escalated"` with a reason that starts with
+"insufficient evidence, escalating", and the graph goes straight to the report.
+Counting invalid replies means a model that never calls `route` still ends.
+
+### Proposals may only act on the alerting service
+
+The proposer refuses an allowed action aimed at another service. For example, it
+will not restart `inventory-api` because `orders-api` is alerting. The refused
+proposal becomes `page_human` in the same way as an off-list action. This keeps
+the blast radius to the service the alert is about.
+
+### Forced tool choice is not used
+
+The default real model (`claude-opus-5-5`) returns a 400 for `tool_choice` `any`
+or `tool`. Tools are bound with the default (`auto`) and the prompts name the
+tool to call. If a model answers in prose instead, the code already treats that
+as a failed step (supervisor) or as `page_human` (proposer).
