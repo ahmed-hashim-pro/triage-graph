@@ -115,6 +115,13 @@ the load-bearing claims:
    practical guard against a looping supervisor, so the step limit is enforced in the
    supervisor node itself, and `run_config()` sets `recursion_limit = 2 * max_steps + 10`
    as a backstop that sits above it.
+7. **`Command(resume=None)` crashes.** In langgraph 1.2.12 it raises
+   `UnboundLocalError: cannot access local variable 'resume_is_map'`
+   (`langgraph/pregel/_loop.py`, around line 927). The thread stays paused, so nothing
+   is lost, but `None` cannot be passed through as a resume value. Reproduced with a
+   ten-line graph outside this project. **Workaround:** `runner.resume()` rejects `None`
+   with a clear error before calling LangGraph. Every other malformed payload reaches
+   the approval node, which fails closed.
 
 ## Design decisions
 
@@ -206,3 +213,43 @@ The default real model (`claude-opus-5-5`) returns a 400 for `tool_choice` `any`
 or `tool`. Tools are bound with the default (`auto`) and the prompts name the
 tool to call. If a model answers in prose instead, the code already treats that
 as a failed step (supervisor) or as `page_human` (proposer).
+
+### The approval gate
+
+- `approval` calls `interrupt()` with the proposal and the allow-list. Nothing
+  before that call has side effects or randomness, because LangGraph re-runs the
+  node from its first line on resume. The proposal id is created earlier, in the
+  proposer, so it is fixed in the checkpoint before the pause.
+- The resume value must validate as `HumanDecision` (`extra="forbid"`) and name
+  the pending proposal's id. An approval is bound to the proposal the human
+  actually saw. Anything else sets `outcome="refused"` and executes nothing.
+- An edit replaces the action only; the target stays the alerting service. The
+  edited action is checked against the allow-list before it is recorded.
+- `executor` does not trust the routing. It re-validates the recorded decision,
+  the proposal id and the allow-list, and checks that the target is the
+  alerting service. If any check fails it raises instead of executing. Tests
+  call it directly with forged states to show this.
+- `DryRunInfra.execute` accepts only `Action` values and records at most once per
+  proposal id. If a crash lands between writing the ledger and writing the
+  checkpoint, the re-run executor returns the earlier record instead of acting
+  twice.
+
+### What the approval gate does not protect against
+
+The gate assumes the checkpoint database is trusted. Anyone who can write to it
+can call `update_state` or edit rows to forge a decision. Signing decisions
+(for example, an HMAC over proposal id + decision) would close that gap. It is
+out of scope here and is listed under Limitations in the README.
+
+### Kill-and-resume test
+
+`tests/test_crash_resume.py` starts `tests/crash_child.py` in a subprocess. The
+child runs a scenario to the approval gate, prints a marker, and blocks on
+stdin. The test then:
+
+1. SIGKILLs the child and checks that nothing was executed.
+2. Opens the SQLite file from the test process and checks that the thread is
+   parked at the gate with the same proposal id.
+3. Resumes the thread in a new subprocess, then checks that the approved action
+   is in the ledger exactly once, and that token usage and findings are identical
+   to the parked state. That shows the investigation was not re-run.
