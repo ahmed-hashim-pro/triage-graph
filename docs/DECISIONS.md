@@ -253,3 +253,15 @@ stdin. The test then:
 3. Resumes the thread in a new subprocess, then checks that the approved action
    is in the ledger exactly once, and that token usage and findings are identical
    to the parked state. That shows the investigation was not re-run.
+
+### Known bias in the evidence: runbooks name the answer
+
+Every runbook section ends with `Suggested action: \`...\``, and the runbook
+agent passes it on to the proposer. For each scenario, the matching section in
+the alerting service's runbook suggests the expected action. A real model can
+therefore score well by following the runbook rather than by diagnosing from
+logs and metrics. Real runbooks often do say what to do, so this is not
+unrealistic. But it means an eval score here says more about "finds and follows
+the right runbook" than about independent diagnosis. The eval report will state
+this. An ablation that strips the suggested-action lines would measure the
+difference; it is not built yet.
