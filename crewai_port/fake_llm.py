@@ -145,7 +145,7 @@ class FakeCrewLLM(BaseLLM):
     def delegate(self, messages: list[dict[str, Any]], coworker: str) -> list[dict[str, Any]]:
         focus = DEFAULT_FOCUS[SPECIALISTS[coworker]]
         return tool_call(
-            f"call_delegate_{len(delegation_results(messages)) + 1}",
+            f"call_delegate_{len(delegation_results(messages)) + 1}_{SPECIALISTS[coworker]}",
             DELEGATE,
             {
                 "task": f"Investigate {focus}. <alert>{find_alert(messages)}</alert>",

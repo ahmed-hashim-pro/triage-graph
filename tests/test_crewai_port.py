@@ -71,6 +71,21 @@ def test_too_few_steps_for_the_evidence_also_escalates():
     assert result.delegations == [LOGS, METRICS]
 
 
+class DelegatesTwiceAtOnce(FakeCrewLLM):
+    """Asks for two specialists in a single turn; CrewAI runs such batches in parallel."""
+
+    def supervise(self, messages):
+        if any(m["role"] == "tool" for m in messages):
+            return self.final_answer(messages)
+        return self.delegate(messages, LOGS) + self.delegate(messages, METRICS)
+
+
+def test_step_limit_holds_when_delegations_run_in_parallel():
+    result = triage(llm=DelegatesTwiceAtOnce, max_steps=1)
+    assert result.status == "escalated"
+    assert len(result.delegations) == 1
+
+
 class RogueProposer(FakeCrewLLM):
     def propose(self, messages):
         args = json.loads(super().propose(messages))

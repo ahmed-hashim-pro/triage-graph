@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import json
 import re
+import threading
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any, Literal
@@ -46,7 +47,8 @@ class StepLimit:
 
     Registered as a CrewAI before-tool-call hook. Hooks run inline in the agent
     executor; CrewAI's event bus runs "sync" handlers on a thread pool, so a counter
-    kept there could lag behind the crew.
+    kept there could lag behind the crew. When the model asks for several tools in
+    one turn, CrewAI runs them on a thread pool, so the count is taken under a lock.
     """
 
     crew: Crew
@@ -54,6 +56,7 @@ class StepLimit:
     delegations: list[str] = field(default_factory=list)
     exceeded: bool = False
     refused: list[str] = field(default_factory=list)
+    _lock: threading.Lock = field(default_factory=threading.Lock, repr=False)
 
     def __call__(self, context: ToolCallHookContext) -> bool | None:
         if context.crew is not self.crew or getattr(context.agent, "role", None) != SUPERVISOR:
@@ -61,14 +64,15 @@ class StepLimit:
         if context.tool_name not in COWORKER_TOOLS:
             return None
         coworker = str(context.tool_input.get("coworker", "")).strip()
-        if len(self.delegations) + len(self.refused) >= self.max_steps:
-            self.exceeded = True
-            return False
-        if coworker not in SPECIALISTS:
-            self.refused.append(coworker)
-            return False
-        self.delegations.append(coworker)
-        return None
+        with self._lock:
+            if len(self.delegations) + len(self.refused) >= self.max_steps:
+                self.exceeded = True
+                return False
+            if coworker not in SPECIALISTS:
+                self.refused.append(coworker)
+                return False
+            self.delegations.append(coworker)
+            return None
 
 
 @dataclass
