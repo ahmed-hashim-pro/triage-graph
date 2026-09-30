@@ -57,20 +57,25 @@ class Proposal(BaseModel):
 
 
 class HumanDecision(BaseModel):
-    """What a human sends back through `Command(resume=...)`."""
+    """What a human sends back through `Command(resume=...)`.
+
+    An edit replaces the action; the target stays the alerting service.
+    """
 
     model_config = ConfigDict(extra="forbid")
 
     decision: Literal["approve", "reject", "edit"]
     proposal_id: str
     action: str | None = None
-    target: str | None = Field(default=None, pattern=SERVICE_NAME)
     reason: str | None = None
+    approver: str | None = None
 
     @model_validator(mode="after")
     def _edit_needs_action(self) -> HumanDecision:
         if self.decision == "edit" and self.action is None:
             raise ValueError("an edit must name the action to run instead")
+        if self.decision != "edit" and self.action is not None:
+            raise ValueError("only an edit may name an action")
         return self
 
 

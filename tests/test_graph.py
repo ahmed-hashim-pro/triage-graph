@@ -14,12 +14,23 @@ from scripted import (
 from triage_graph.fake_model import FakeTriageModel
 from triage_graph.graph import build_graph, run_config
 from triage_graph.nodes import INSUFFICIENT_EVIDENCE
+from triage_graph.runner import resume, start
 
 
 def run(model, scenario="high-latency", **inputs):
     graph = build_graph(model, **inputs.pop("graph_kwargs", {}))
-    config = inputs.pop("config", None) or run_config("test")
+    config = {
+        "configurable": {"thread_id": "test"},
+        **(inputs.pop("config", None) or run_config("t")),
+    }
     return graph.invoke({"alert": alert_dict(scenario), **inputs}, config)
+
+
+def run_and_approve(model, scenario="high-latency"):
+    graph = build_graph(model)
+    paused = start(graph, alert_dict(scenario), thread_id="t")
+    decision = {"decision": "approve", "proposal_id": paused.pending["proposal"]["id"]}
+    return resume(graph, "t", decision).state
 
 
 def test_fake_model_proposes_the_expected_action(scenario):
@@ -35,7 +46,7 @@ def test_fake_model_proposes_the_expected_action(scenario):
 
 
 def test_report_carries_each_specialists_evidence():
-    report = run(FakeTriageModel(), "error-spike-after-deploy")["report"]
+    report = run_and_approve(FakeTriageModel(), "error-spike-after-deploy")["report"]
     for heading in (
         "## Diagnosis",
         "## Proposed action",
@@ -79,7 +90,7 @@ def test_run_config_leaves_room_for_the_step_limit():
 
 
 def test_off_list_action_from_the_model_is_refused():
-    state = run(ProposesAction(action="drop_database"))
+    state = run_and_approve(ProposesAction(action="drop_database"))
     proposal = state["proposal"]
     assert proposal["action"] == "page_human"
     assert proposal["refused_action"] == "drop_database"

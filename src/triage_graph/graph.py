@@ -1,4 +1,4 @@
-"""Graph wiring: a supervisor loop over three specialists, then a proposal and a report."""
+"""Graph wiring: supervisor loop over specialists, proposal, human approval, execution, report."""
 
 from __future__ import annotations
 
@@ -6,11 +6,14 @@ from typing import Any
 
 from langchain_core.language_models import BaseChatModel
 from langchain_core.runnables import RunnableConfig
+from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.state import CompiledStateGraph
 from langgraph.types import Checkpointer
 
+from triage_graph.approval import approval, make_executor, route_after_approval
 from triage_graph.fake_model import FakeTriageModel
+from triage_graph.infra import DryRunInfra
 from triage_graph.nodes import make_proposer, make_supervisor
 from triage_graph.report import make_report_node
 from triage_graph.schemas import SPECIALISTS, Alert
@@ -34,14 +37,25 @@ def route_after_supervisor(state: TriageState) -> str:
 
 
 def build_graph(
-    model: BaseChatModel, *, checkpointer: Checkpointer = None, max_tool_rounds: int = 4
+    model: BaseChatModel,
+    *,
+    checkpointer: Checkpointer = None,
+    infra: DryRunInfra | None = None,
+    max_tool_rounds: int = 4,
 ) -> CompiledStateGraph:
+    """Compile the triage graph.
+
+    The approval step pauses with interrupt(), which needs a checkpointer; without
+    one, an in-memory saver is used and nothing survives the process.
+    """
     graph = StateGraph(TriageState, input_schema=TriageInput)
     graph.add_node("intake", intake)
     graph.add_node("supervisor", make_supervisor(model))
     for name in SPECIALISTS:
         graph.add_node(name, make_specialist_node(name, model, max_tool_rounds))
     graph.add_node("proposer", make_proposer(model))
+    graph.add_node("approval", approval)
+    graph.add_node("executor", make_executor(infra or DryRunInfra()))
     graph.add_node("report", make_report_node(estimated_tokens=isinstance(model, FakeTriageModel)))
 
     graph.add_edge(START, "intake")
@@ -51,9 +65,11 @@ def build_graph(
     )
     for name in SPECIALISTS:
         graph.add_edge(name, "supervisor")
-    graph.add_edge("proposer", "report")
+    graph.add_edge("proposer", "approval")
+    graph.add_conditional_edges("approval", route_after_approval, ["executor", "report"])
+    graph.add_edge("executor", "report")
     graph.add_edge("report", END)
-    return graph.compile(checkpointer=checkpointer)
+    return graph.compile(checkpointer=checkpointer if checkpointer is not None else InMemorySaver())
 
 
 def run_config(thread_id: str, max_steps: int = DEFAULT_MAX_STEPS) -> RunnableConfig:
