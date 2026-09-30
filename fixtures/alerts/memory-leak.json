@@ -1,0 +1,10 @@
+{
+  "id": "ALERT-1044",
+  "service": "inventory-api",
+  "title": "inventory-api memory usage above 95%",
+  "severity": "high",
+  "fired_at": "2026-09-14T12:40:00Z",
+  "description": "Container memory for inventory-api is above 95% of its limit (threshold 95% for 5 minutes).",
+  "dataset": "memory-leak",
+  "labels": {"team": "inventory", "env": "prod-sim"}
+}

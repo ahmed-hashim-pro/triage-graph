@@ -1,0 +1,10 @@
+{
+  "id": "ALERT-1042",
+  "service": "checkout-api",
+  "title": "checkout-api p99 latency above 1s",
+  "severity": "high",
+  "fired_at": "2026-09-14T10:30:00Z",
+  "description": "p99 latency for checkout-api has been above 1000ms for 10 minutes (threshold 1000ms).",
+  "dataset": "high-latency",
+  "labels": {"team": "checkout", "env": "prod-sim"}
+}

@@ -1,0 +1,18 @@
+{
+  "high-latency": {
+    "expected_action": "scale_up",
+    "why": "Request rate rose ~2.5x, CPU saturated, and the autoscaler is already at its replica ceiling. No deploy, no memory growth."
+  },
+  "error-spike-after-deploy": {
+    "expected_action": "rollback_deploy",
+    "why": "5xx rate went from ~0.3% to ~11% one minute after v3.8.0 rolled out; the errors are a KeyError in code paths touched by that release."
+  },
+  "memory-leak": {
+    "expected_action": "restart_service",
+    "why": "Heap usage climbed steadily for four hours with a cache that never evicts, ending in OutOfMemoryError. A restart is the runbook mitigation."
+  },
+  "intermittent-5xx": {
+    "expected_action": "page_human",
+    "why": "Error bursts coincide with both inventory-api 503s and orders-db pool timeouts, shortly after a feature-flag change. No single cause, and none of the allowed actions addresses a dependency failure."
+  }
+}

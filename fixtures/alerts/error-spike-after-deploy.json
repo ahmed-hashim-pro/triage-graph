@@ -1,0 +1,10 @@
+{
+  "id": "ALERT-1043",
+  "service": "payments-api",
+  "title": "payments-api 5xx error rate above 5%",
+  "severity": "critical",
+  "fired_at": "2026-09-14T14:10:00Z",
+  "description": "payments-api is returning 5xx on more than 5% of requests (threshold 5% over 5 minutes).",
+  "dataset": "error-spike-after-deploy",
+  "labels": {"team": "payments", "env": "prod-sim"}
+}

@@ -1,0 +1,10 @@
+{
+  "id": "ALERT-1045",
+  "service": "orders-api",
+  "title": "orders-api 5xx error rate above 1%",
+  "severity": "high",
+  "fired_at": "2026-09-14T16:25:00Z",
+  "description": "orders-api crossed a 1% 5xx rate several times in the last 30 minutes; each burst lasts about two minutes.",
+  "dataset": "intermittent-5xx",
+  "labels": {"team": "orders", "env": "prod-sim"}
+}
