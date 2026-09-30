@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-from collections.abc import Callable
 from typing import Any
 
 from triage_graph.state import DEFAULT_MAX_STEPS, TriageState
@@ -67,16 +66,17 @@ def _outcome_line(state: TriageState) -> str:
     return f"**{outcome}**" + (f": {reason}" if reason else "")
 
 
-def render_report(state: TriageState, *, estimated_tokens: bool = False) -> str:
+def render_report(state: TriageState) -> str:
     alert = state["alert"]
     usage = state.get("usage", {})
-    token_note = " (estimated: chars / 4, fake model)" if estimated_tokens else ""
+    token_note = " (estimated: chars / 4, fake model)" if state.get("model") == "fake" else ""
     lines = [
         f"# Incident report: {alert['title']}",
         "",
         f"- Alert: {alert['id']} ({alert['severity']}) on `{alert['service']}`, "
         f"fired {alert['fired_at']}",
         f"- Outcome: {_outcome_line(state)}",
+        f"- Model: {state.get('model', 'unknown')}",
         f"- Supervisor steps: {state.get('steps', 0)} of "
         f"{state.get('max_steps', DEFAULT_MAX_STEPS)}",
         f"- Model calls: {usage.get('model_calls', 0)}; tokens in/out: "
@@ -107,6 +107,8 @@ def render_report(state: TriageState, *, estimated_tokens: bool = False) -> str:
             lines.append(f"- Action chosen by the human: `{decision['action']}`")
         if decision.get("reason"):
             lines.append(f"- Reason: {decision['reason']}")
+        if decision.get("approver"):
+            lines.append(f"- Decided by: {decision['approver']}")
 
     execution = state.get("execution")
     if execution:
@@ -150,8 +152,5 @@ def render_report(state: TriageState, *, estimated_tokens: bool = False) -> str:
     return "\n".join(lines) + "\n"
 
 
-def make_report_node(*, estimated_tokens: bool) -> Callable[[TriageState], dict[str, Any]]:
-    def report(state: TriageState) -> dict[str, Any]:
-        return {"report": render_report(state, estimated_tokens=estimated_tokens)}
-
-    return report
+def report(state: TriageState) -> dict[str, Any]:
+    return {"report": render_report(state)}

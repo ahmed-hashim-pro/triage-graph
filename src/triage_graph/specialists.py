@@ -47,7 +47,10 @@ def build_specialist(
         messages = state["messages"]
         rounds = sum(1 for m in messages if isinstance(m, AIMessage) and m.tool_calls)
         if rounds < max_tool_rounds:
-            return {"messages": [with_tools.invoke(messages)]}
+            reply = with_tools.invoke(messages)
+            for call in reply.tool_calls:
+                emit("tool_call", specialist=name, tool=call["name"], args=call["args"])
+            return {"messages": [reply]}
         # Tools stay bound because Anthropic rejects histories containing tool_use blocks
         # without tool definitions; any tool call in this final reply is dropped.
         reply = with_tools.invoke([*messages, HumanMessage(OUT_OF_ROUNDS)])

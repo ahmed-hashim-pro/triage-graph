@@ -27,7 +27,9 @@ class TriageInput(TypedDict):
 class TriageState(TypedDict, total=False):
     alert: dict[str, Any]
     max_steps: int
-    # Number of specialist dispatches the supervisor has made.
+    # Which model produced the findings, e.g. "fake" or "anthropic:claude-opus-5-5".
+    model: str
+    # Supervisor turns that did not end the investigation, including invalid replies.
     steps: int
     next: str
     focus: str

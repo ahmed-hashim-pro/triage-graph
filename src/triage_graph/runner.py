@@ -59,6 +59,9 @@ def _drive(
         graph_input,
         config,
         stream_mode=["updates", "custom"],
+        # Without subgraphs=True, custom events from inside the specialist
+        # subgraphs (live tool calls) are silently dropped.
+        subgraphs=True,
         version="v2",
         durability="sync",
     ):

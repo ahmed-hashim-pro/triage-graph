@@ -11,6 +11,13 @@ from triage_graph.fake_model import FakeTriageModel
 DEFAULT_ANTHROPIC_MODEL = "claude-opus-5-5"
 
 
+def describe_model(model: BaseChatModel) -> str:
+    if isinstance(model, FakeTriageModel):
+        return "fake"
+    name = getattr(model, "model", None) or getattr(model, "model_name", None) or "unknown"
+    return f"{model._llm_type}:{name}"
+
+
 def make_model(provider: str | None = None, model: str | None = None) -> BaseChatModel:
     """Build the chat model named by `provider`, or by TRIAGE_PROVIDER (default "fake").
 

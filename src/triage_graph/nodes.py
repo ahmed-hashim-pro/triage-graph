@@ -46,7 +46,7 @@ def make_supervisor(model: BaseChatModel) -> Callable[[TriageState], dict[str, A
                 f"{INSUFFICIENT_EVIDENCE}: no proposal after {steps} supervisor steps "
                 f"(limit {max_steps})"
             )
-            emit("escalate", reason=reason)
+            emit("escalate", reason=reason, max_steps=max_steps)
             return {"next": "escalate", "outcome": "escalated", "outcome_reason": reason}
 
         reply = bound.invoke(
@@ -65,12 +65,12 @@ def make_supervisor(model: BaseChatModel) -> Callable[[TriageState], dict[str, A
             # An unusable reply still spends a step, so a model that never answers
             # properly runs into the limit instead of looping forever.
             entry = {"step": steps + 1, "next": "retry", "reason": "no valid route call"}
-            emit("route", **entry)
+            emit("route", **entry, max_steps=max_steps)
             return {**update, "steps": steps + 1, "next": "retry", "supervisor_log": [entry]}
 
         if route.next == "propose":
             entry = {"step": steps, "next": "propose", "reason": route.reason}
-            emit("route", **entry)
+            emit("route", **entry, max_steps=max_steps)
             return {**update, "next": "propose", "supervisor_log": [entry]}
 
         entry = {
@@ -79,7 +79,7 @@ def make_supervisor(model: BaseChatModel) -> Callable[[TriageState], dict[str, A
             "focus": route.focus,
             "reason": route.reason,
         }
-        emit("route", **entry)
+        emit("route", **entry, max_steps=max_steps)
         return {
             **update,
             "steps": steps + 1,
