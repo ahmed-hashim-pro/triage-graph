@@ -265,7 +265,7 @@ def write_scenario(scenario: Scenario, root: Path = ROOT) -> None:
     at = scenario.fired_at
 
     with (root / "fixtures" / "metrics" / f"{scenario.name}.csv").open("w", newline="") as f:
-        writer = csv.writer(f)
+        writer = csv.writer(f, lineterminator="\n")
         writer.writerow(["ts", "service", "metric", "value"])
         for minute in range(START_MIN, END_MIN + 1):
             for metric in METRICS:
