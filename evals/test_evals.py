@@ -107,6 +107,7 @@ def test_plan_is_cut_to_fit_the_budget():
 
 
 def test_results_files_never_contain_credentials(tmp_path, monkeypatch):
+    pytest.importorskip("langchain_anthropic", reason="needs the anthropic extra")
     sentinel = "sk-ant-api03-SENTINEL-must-not-be-written"
     monkeypatch.setenv("ANTHROPIC_API_KEY", sentinel)
     real = make_model("anthropic")
