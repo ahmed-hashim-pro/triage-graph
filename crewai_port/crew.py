@@ -24,6 +24,7 @@ from crewai.hooks import (
     register_before_tool_call_hook,
     unregister_before_tool_call_hook,
 )
+from crewai.state.checkpoint_config import CheckpointConfig
 from crewai.tasks.conditional_task import ConditionalTask
 
 from crewai_port.roles import LOGS, METRICS, PROPOSER, RUNBOOKS, SPECIALISTS, SUPERVISOR
@@ -97,7 +98,10 @@ LLMFactory = Callable[[], BaseLLM | str]
 
 
 def build_crew(
-    alert: Alert, llm: LLMFactory, max_steps: int = DEFAULT_MAX_STEPS
+    alert: Alert,
+    llm: LLMFactory,
+    max_steps: int = DEFAULT_MAX_STEPS,
+    checkpoint: CheckpointConfig | None = None,
 ) -> tuple[Crew, StepLimit, Task]:
     """Build the crew. `llm` is called once per agent.
 
@@ -158,6 +162,7 @@ def build_crew(
         tasks=[investigate, propose],
         process=Process.sequential,
         verbose=False,
+        **({"checkpoint": checkpoint} if checkpoint else {}),
     )
     step_limit.crew = crew
     return crew, step_limit, propose
