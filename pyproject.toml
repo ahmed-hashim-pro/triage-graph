@@ -16,6 +16,9 @@ dependencies = [
     "pydantic==2.12.5",
 ]
 
+[project.urls]
+Repository = "https://github.com/ahmed-hashim-pro/triage-graph"
+
 [project.optional-dependencies]
 anthropic = ["langchain-anthropic==1.7.5"]
 # crewai 1.15.23 declares requires-python <3.14.

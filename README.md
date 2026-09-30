@@ -12,15 +12,17 @@ markdown report of the evidence each specialist found.
 **This is a portfolio project.** It runs against four synthetic incidents in
 `fixtures/`, acts on a dry-run infrastructure adapter, and has never been used on a
 real incident. Everything runs offline on a deterministic fake model. A real model
-(Anthropic by default) can be switched on with an environment variable, but no
-real-model run is included here. See [Limitations](#limitations).
+(Anthropic by default) can be switched on with an environment variable.
+
+**Real-model results have not been run yet.** Every result in this repository comes
+from the fake model. See [Limitations](#limitations).
 
 ## Quickstart (no API key)
 
 You need [uv](https://docs.astral.sh/uv/).
 
 ```sh
-git clone <this repo> triage-graph && cd triage-graph
+git clone https://github.com/ahmed-hashim-pro/triage-graph.git && cd triage-graph
 uv sync
 uv run triage run --alert fixtures/alerts/high-latency.json --thread-id demo
 uv run triage resume demo --approve
@@ -125,15 +127,15 @@ export ANTHROPIC_API_KEY=...
 TRIAGE_PROVIDER=anthropic uv run triage run --alert fixtures/alerts/memory-leak.json
 ```
 
-`TRIAGE_MODEL` changes the model (default `claude-opus-5-5`) and `TRIAGE_EFFORT` sets
-the reasoning effort. This path was written against the `langchain-anthropic` docs and
+`TRIAGE_MODEL` changes the model (default `claude-opus-5-5`; the eval defaults to
+`claude-haiku-4-5` instead) and `TRIAGE_EFFORT` sets the reasoning effort. This path was written against the `langchain-anthropic` docs and
 source but **never run**: no API key was available while it was built.
 
 ## Evals
 
 ```sh
 uv run python -m evals.run                          # fake model, writes evals/results/fake.md
-TRIAGE_PROVIDER=anthropic uv run python -m evals.run  # real model: shows the plan and cost, asks first
+TRIAGE_PROVIDER=anthropic uv run python -m evals.run  # claude-haiku-4-5: shows the plan and cost, asks first
 ```
 
 Each scenario runs N times in two variants: with the runbooks' "Suggested action"
@@ -143,12 +145,13 @@ disagreed, and averages steps and tokens.
 
 - **Fake model.** The eval runs as part of the test suite. Its 100% is by construction,
   and the report says so: [evals/results/fake.md](evals/results/fake.md).
-- **Real model.** The script prints its plan and estimated cost, asks before spending
-  anything, and caps spend at $2 by default. A callback refuses any model call whose
-  worst case could cross the cap. At list prices, $2 covers about one run per cell on
-  `claude-opus-5-5` (low effort only) and about six on `claude-haiku-4-5`; see
-  [DECISIONS.md](docs/DECISIONS.md#cost-control-for-real-model-runs). No real-model
-  results are committed.
+- **Real model.** By default: `claude-haiku-4-5`, 6 runs per scenario and variant (48
+  runs), estimated at $1.72 at list price. The script prints this plan, asks before
+  spending anything, and caps spend at $2. A callback refuses any model call whose
+  worst case could cross the cap. `--model claude-opus-5-5 --effort low` also fits,
+  but only 1 run per cell; see
+  [DECISIONS.md](docs/DECISIONS.md#cost-control-for-real-model-runs).
+- **Real-model results have not been run yet.**
 
 ## The CrewAI port
 
@@ -162,6 +165,13 @@ as a CrewAI crew. It uses the same fixtures, tools, prompts and allow-list check
 the fake models it proposes the same action as the LangGraph version for every
 scenario. Two experiments test how CrewAI pauses for approval and resumes after a
 crash.
+
+**CrewAI writes files outside this repo.** On macOS, importing CrewAI creates a secret
+key at `~/Library/Application Support/crewai/credentials/secret.key`, and running the
+crew writes a SQLite file at
+`~/Library/Application Support/triage-graph/latest_kickoff_task_outputs.db`. Nothing in
+this repo reads either file, and I found no CrewAI setting that stops them being
+written.
 
 [docs/LANGGRAPH_VS_CREWAI.md](docs/LANGGRAPH_VS_CREWAI.md) covers what each framework
 made easy, what it hid, and where it needed working around, all from building this.

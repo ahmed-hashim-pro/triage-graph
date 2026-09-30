@@ -170,6 +170,12 @@ the load-bearing claims:
     - Completed task output and custom tools were restored as documented, and the
       finished task was skipped.
 
+    The LLM swap is deliberate: crewAI
+    [PR #6117](https://github.com/crewAIInc/crewAI/pull/6117) replaced a crash on
+    restoring custom LLMs with this "best-effort" fallback. No issue reports the
+    silent provider switch. A write-up for the maintainers, with a standalone repro,
+    is in [`docs/upstream/crewai-restore-llm.md`](upstream/crewai-restore-llm.md).
+
 ## CrewAI gotchas found while building the port
 
 None of these is a docs contradiction; all were observed on 1.15.23.
@@ -460,6 +466,11 @@ planner fits the following under $2 for four scenarios × two variants:
 | claude-haiku-4-5 | none (no thinking by default) | 0.04 | 6 |
 
 One run per cell cannot show flakiness; the report says that when N < 3.
+
+**Default eval model (decided 2026-10-01):** `claude-haiku-4-5` with 6 runs per
+scenario and variant, estimated at $1.72 of the $2 cap. `claude-opus-5-5` stays
+available through `--model`; the command-line tool itself still defaults to
+`claude-opus-5-5`.
 
 ### Credentials
 
