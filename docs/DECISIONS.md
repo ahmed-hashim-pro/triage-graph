@@ -135,6 +135,105 @@ the load-bearing claims:
    `runner.resume()` rejects `None` before calling LangGraph. Every other malformed
    payload reaches the approval node, which fails closed.
 
+8. **CrewAI custom LLMs don't run tools; the executor does.** The custom-LLM page
+   (https://docs.crewai.com/en/learn/custom-llm, lines 240-265 of its `.md` export)
+   shows `call()` executing tools itself: `if "tool_calls" in message and
+   available_functions: return self._handle_function_calls(...)`. In crewai 1.15.23 the
+   native tool loop passes `available_functions=None`
+   (`crewai/agents/crew_agent_executor.py:543`), then executes whatever tool calls
+   `call()` returns. The docstring of `_handle_native_tool_calls` (line 694) says
+   "Executes only the FIRST tool call", but the code below it runs a batch of calls in
+   parallel on a thread pool of up to 8 workers. It runs only the first call, and
+   drops the rest, when a tool in the batch has `result_as_answer` or
+   `max_usage_count` set. The port's step-limit hook takes a lock because of this.
+9. **CrewAI's `step_callback` doesn't fire for tool calls in native function-calling
+   mode.** The crews page (https://docs.crewai.com/en/concepts/crews, line 28 of the
+   `.md` export) says: "A function that is called after each step of every agent." In
+   the native loop it is called only with final answers
+   (`crew_agent_executor.py:569`, `:581`, `:591`). Only the text-based ReAct loop
+   (`:452`) calls it for intermediate steps. This is why the port counts delegations
+   with a tool hook instead.
+10. **A CrewAI checkpoint does not restore custom LLMs or task conditions.** The
+    checkpointing page (https://docs.crewai.com/en/concepts/checkpointing, line 33):
+    "A checkpoint captures everything CrewAI needs to recreate a run mid-flight: the
+    full state of the crew, flow, or agent — configuration, …". What happened, pinned
+    by `tests/test_crewai_resume.py`:
+    - The custom `BaseLLM` subclass was saved as `{"llm_type": "base", "model":
+      "triage-fake", ...}` and came back as `OpenAICompletion`. `_validate_llm_ref`
+      (`crewai/agents/agent_builder/base_agent.py:88`) looks `llm_type` up in a
+      closed registry of built-in classes (line 77). For the abstract `"base"` entry
+      it falls back to a generic `LLM(model=...)` (line 121), which picked OpenAI for
+      this model name. With `OPENAI_API_KEY` set, the resumed run would have sent the
+      prompts to OpenAI.
+    - The `ConditionalTask` came back as a plain `Task`, with its condition `null`
+      in the checkpoint.
+    - Completed task output and custom tools were restored as documented, and the
+      finished task was skipped.
+
+## CrewAI gotchas found while building the port
+
+None of these is a docs contradiction; all were observed on 1.15.23.
+
+- **Token usage is multiplied when agents share an LLM instance.**
+  `Crew.calculate_usage_metrics` (`crewai/crew.py:2273`) adds up
+  `agent.llm.get_token_usage_summary()` per agent (line 2279). Five agents sharing one
+  instance reported 60 requests and 36,635 tokens for 12 real calls. With one instance
+  per agent it reported 12 requests and 7,327 tokens. The port builds one LLM per
+  agent.
+- **"Sync" event handlers run on a thread pool.** `crewai/events/event_bus.py:633`
+  submits them to a `ThreadPoolExecutor`, so a counter kept in a handler can lag
+  behind the crew. The port's step limit uses a before-tool-call hook instead, which
+  runs inline (`crew_agent_executor.py:982`).
+- **Every tool exception becomes text for the model.** `crew_agent_executor.py:1016`:
+  `result = f"Error executing tool: {e}"`. This includes bugs, which in LangGraph
+  would fail the run.
+- **`Task(human_input=True)` is a blocking `input()` call**
+  (`crewai/core/providers/human_input.py:364`) inside the agent executor. The text
+  typed there goes back to the agent as feedback; there is no approve/reject.
+- **CrewAI writes outside the working directory.** With `HOME` pointed at an empty
+  temporary directory:
+  - `import crewai` alone created `Library/Application Support/crewai/credentials/secret.key`,
+    an encryption key made by `crewai_core/token_manager.py:34` for CrewAI platform
+    tokens;
+  - one `kickoff()` also wrote
+    `Library/Application Support/<CREWAI_STORAGE_DIR>/latest_kickoff_task_outputs.db`.
+
+  I found no setting that turns either off.
+- **Telemetry is on by default.** It is turned off by `CREWAI_DISABLE_TELEMETRY`,
+  `OTEL_SDK_DISABLED` or `CREWAI_TRACING_ENABLED=false`
+  (`crewai_core/telemetry.py:356`). `crewai_port/__init__.py` sets these defaults.
+- **A `BaseLLM` subclass can't default `model` with a field default.** The validator
+  checks the raw input (`crewai/llms/base_llm.py:315`, "Model name is required"), so
+  `FakeCrewLLM` passes it through `__init__`.
+- **536 `DeprecationWarning`s per port test run come from CrewAI's own code**, for
+  options this repo never sets (`function_calling_llm`, `allow_code_execution`,
+  `multimodal`). pytest filters `DeprecationWarning`s raised from `crewai.*` modules.
+
+## CrewAI port design
+
+- **Sequential process with a delegating supervisor, not `Process.hierarchical`.** In
+  the hierarchical process every task goes through the manager, including the
+  proposal. The proposer's JSON would then reach us only via the manager's final
+  answer. Here the supervisor agent (`allow_delegation=True`) owns the investigation
+  task, and the proposer owns a second task.
+- **Step limit:** a before-tool-call hook, registered only for the duration of
+  `kickoff()`, filters on this crew and the supervisor's role, and counts delegations.
+  It blocks any delegation past `max_steps`, and any delegation to a
+  non-specialist (for example, asking the proposer early), which also uses a step.
+  A blocked attempt past the limit marks the run escalated, and the proposal
+  `ConditionalTask` is skipped. `max_iter` alone could not do this: at the limit,
+  CrewAI asks the model for a final answer and returns it with no sign that the
+  limit was reached (`crewai/utilities/agent_utils.py:376`,
+  `handle_max_iterations_exceeded`).
+- **Evidence:** the proposer gets the supervisor's final answer as task context,
+  which is prose. The raw tool output stays inside each coworker's run. This
+  differs from the LangGraph proposer, which gets raw tool output, so the CrewAI
+  fake proposer reads signals from text (`signals_from_text`).
+- **Allow-list:** the proposer's reply is parsed as JSON and passed to the same
+  `validate_proposal` as the LangGraph proposer.
+- **The real provider path is untested.** `run_triage` accepts any CrewAI LLM
+  factory, but no real model was run.
+
 ## Design decisions
 
 ### State is plain JSON-shaped dicts; pydantic validates at the edges
