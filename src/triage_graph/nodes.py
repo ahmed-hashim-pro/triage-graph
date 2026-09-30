@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import uuid
 from collections.abc import Callable
 from typing import Any
 
@@ -10,18 +9,17 @@ from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import AIMessage, SystemMessage
 from pydantic import ValidationError
 
-from triage_graph.actions import Action, ActionNotAllowedError, require_allowed
 from triage_graph.progress import emit
 from triage_graph.prompts import (
     PROPOSE_TOOL,
     PROPOSER_SYSTEM,
     ROUTE_TOOL,
     SUPERVISOR_SYSTEM,
-    ProposeArgs,
     RouteArgs,
     proposer_message,
     supervisor_message,
 )
+from triage_graph.proposals import validate_proposal
 from triage_graph.schemas import Proposal
 from triage_graph.specialists import usage_of
 from triage_graph.state import DEFAULT_MAX_STEPS, TriageState
@@ -92,55 +90,11 @@ def make_supervisor(model: BaseChatModel) -> Callable[[TriageState], dict[str, A
 
 
 def proposal_from(reply: AIMessage, service: str) -> Proposal:
-    """Turn the proposer's reply into a Proposal, refusing anything unsafe.
-
-    Refusals are not errors: the proposal becomes page_human and records what
-    the model asked for, so the human reviewing it sees the attempt.
-    """
-    proposal_id = uuid.uuid4().hex[:12]
-
-    def escalate(diagnosis: str, note: str, refused: str | None = None) -> Proposal:
-        return Proposal(
-            id=proposal_id,
-            diagnosis=diagnosis,
-            action=Action.PAGE_HUMAN,
-            target=service,
-            rationale="The model's proposal could not be used, so the incident goes to a human.",
-            refused_action=refused,
-            note=note,
-        )
-
-    raw = _tool_args(reply, "propose_action")
-    if raw is None:
-        return escalate(
-            reply.text or "No diagnosis returned.", "the model did not call propose_action"
-        )
-    try:
-        args = ProposeArgs.model_validate(raw)
-    except ValidationError as exc:
-        return escalate("No usable diagnosis returned.", f"invalid propose_action arguments: {exc}")
-
-    try:
-        action = require_allowed(args.action)
-    except ActionNotAllowedError:
-        return escalate(
-            args.diagnosis,
-            f"the model proposed {args.action!r}, which is not on the allow-list; refused",
-            refused=args.action[:100],
-        )
-    if args.target != service:
-        return escalate(
-            args.diagnosis,
-            f"the model proposed {action} on {args.target!r}, but only the alerting service "
-            f"({service}) may be acted on; refused",
-            refused=f"{action} on {args.target[:60]}",
-        )
-    return Proposal(
-        id=proposal_id,
-        diagnosis=args.diagnosis,
-        action=action,
-        target=service,
-        rationale=args.rationale,
+    return validate_proposal(
+        _tool_args(reply, "propose_action"),
+        service,
+        missing_note="the model did not call propose_action",
+        fallback_diagnosis=reply.text,
     )
 
 

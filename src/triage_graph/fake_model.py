@@ -16,6 +16,7 @@ import hashlib
 import json
 import re
 from collections.abc import Callable, Sequence
+from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Any
 
@@ -186,64 +187,8 @@ class FakeTriageModel(BaseChatModel):
 
     def propose(self, messages: Sequence[BaseMessage]) -> AIMessage:
         alert = read_tag(messages, "alert")
-        findings = read_tag(messages, "findings") or []
-        outputs: dict[str, list[Any]] = {}
-        for finding in findings:
-            for call in finding["tool_calls"]:
-                try:
-                    outputs.setdefault(call["name"], []).append(json.loads(call["output"]))
-                except json.JSONDecodeError:
-                    continue
-
-        anomalous = {
-            a["metric"]
-            for out in outputs.get("detect_metric_anomalies", [])
-            for a in out["anomalies"]
-        }
-        log_lines = [g["example"] for out in outputs.get("search_logs", []) for g in out["groups"]]
-        deploys = [line for line in log_lines if DEPLOY.search(line)]
-        ooms = [line for line in log_lines if "OutOfMemoryError" in line]
-        runbook_hits = [r for out in outputs.get("search_runbooks", []) for r in out["results"]]
-        suggested = runbook_hits[0].get("suggested_action") if runbook_hits else None
-
-        candidates: dict[Action, str] = {}
-        if deploys and "error_rate_pct" in anomalous:
-            candidates[Action.ROLLBACK_DEPLOY] = (
-                f"The error rate is anomalous and a deploy happened in the window: {deploys[-1]!r}."
-            )
-        if {"cpu_pct", "rps"} <= anomalous and "memory_pct" not in anomalous:
-            candidates[Action.SCALE_UP] = (
-                "Request rate and CPU rose together with no memory growth: the service is short "
-                "of capacity."
-            )
-        if ooms or "memory_pct" in anomalous:
-            evidence = f"{ooms[0]!r} in the logs" if ooms else "sustained memory growth"
-            candidates[Action.RESTART_SERVICE] = f"Memory exhaustion: {evidence}."
-
-        if len(candidates) == 1:
-            ((action, diagnosis),) = candidates.items()
-            rationale = "Exactly one rule matched the evidence."
-        else:
-            action = Action.PAGE_HUMAN
-            diagnosis = (
-                "The evidence does not isolate a single cause that an allowed action fixes. "
-                f"Anomalous metrics: {sorted(anomalous) or 'none'}. "
-                f"Rules matched: {sorted(candidates) or 'none'}."
-            )
-            rationale = "Ambiguous evidence goes to a human."
-        if suggested:
-            agreement = "agrees" if suggested == action else f"suggests {suggested} instead"
-            rationale += f" The top runbook section {agreement}."
-
-        return self.tool_call(
-            "propose_action",
-            {
-                "diagnosis": diagnosis,
-                "action": str(action),
-                "target": alert["service"],
-                "rationale": rationale,
-            },
-        )
+        signals = signals_from_findings(read_tag(messages, "findings") or [])
+        return self.tool_call("propose_action", decide(signals, alert["service"]))
 
     # Helpers
 
@@ -258,6 +203,96 @@ class FakeTriageModel(BaseChatModel):
     @staticmethod
     def _fired_at(messages: Sequence[BaseMessage]) -> datetime:
         return datetime.fromisoformat(read_tag(messages, "alert")["fired_at"])
+
+
+@dataclass(frozen=True)
+class Signals:
+    """What the fake proposer's rules look at."""
+
+    anomalous: frozenset[str]
+    log_lines: tuple[str, ...]
+    suggested: str | None
+
+
+def signals_from_findings(findings: list[dict[str, Any]]) -> Signals:
+    """Signals from the structured tool output the LangGraph proposer receives."""
+    outputs: dict[str, list[Any]] = {}
+    for finding in findings:
+        for call in finding["tool_calls"]:
+            try:
+                outputs.setdefault(call["name"], []).append(json.loads(call["output"]))
+            except json.JSONDecodeError:
+                continue
+    runbook_hits = [r for out in outputs.get("search_runbooks", []) for r in out["results"]]
+    return Signals(
+        anomalous=frozenset(
+            a["metric"]
+            for out in outputs.get("detect_metric_anomalies", [])
+            for a in out["anomalies"]
+        ),
+        log_lines=tuple(
+            g["example"] for out in outputs.get("search_logs", []) for g in out["groups"]
+        ),
+        suggested=runbook_hits[0].get("suggested_action") if runbook_hits else None,
+    )
+
+
+_ANOMALOUS = re.compile(r"\b(cpu_pct|memory_pct|latency_p99_ms|error_rate_pct|rps) anomalous\b")
+_SUGGESTED = re.compile(r"suggested action: ([a-z_]+)")
+
+
+def signals_from_text(text: str) -> Signals:
+    """Signals from the specialists' prose summaries (all the CrewAI proposer gets)."""
+    suggested = _SUGGESTED.search(text)
+    return Signals(
+        anomalous=frozenset(_ANOMALOUS.findall(text)),
+        log_lines=tuple(text.splitlines()),
+        suggested=suggested.group(1) if suggested else None,
+    )
+
+
+def decide(signals: Signals, service: str) -> dict[str, str]:
+    """The fake proposer's rules. Returns `propose_action` arguments."""
+    anomalous = signals.anomalous
+    deploys = [line for line in signals.log_lines if DEPLOY.search(line)]
+    ooms = [line for line in signals.log_lines if "OutOfMemoryError" in line]
+
+    candidates: dict[Action, str] = {}
+    if deploys and "error_rate_pct" in anomalous:
+        candidates[Action.ROLLBACK_DEPLOY] = (
+            f"The error rate is anomalous and a deploy happened in the window: {deploys[-1]!r}."
+        )
+    if {"cpu_pct", "rps"} <= anomalous and "memory_pct" not in anomalous:
+        candidates[Action.SCALE_UP] = (
+            "Request rate and CPU rose together with no memory growth: the service is short "
+            "of capacity."
+        )
+    if ooms or "memory_pct" in anomalous:
+        evidence = f"{ooms[0]!r} in the logs" if ooms else "sustained memory growth"
+        candidates[Action.RESTART_SERVICE] = f"Memory exhaustion: {evidence}."
+
+    if len(candidates) == 1:
+        ((action, diagnosis),) = candidates.items()
+        rationale = "Exactly one rule matched the evidence."
+    else:
+        action = Action.PAGE_HUMAN
+        diagnosis = (
+            "The evidence does not isolate a single cause that an allowed action fixes. "
+            f"Anomalous metrics: {sorted(anomalous) or 'none'}. "
+            f"Rules matched: {sorted(candidates) or 'none'}."
+        )
+        rationale = "Ambiguous evidence goes to a human."
+    if signals.suggested:
+        agreement = (
+            "agrees" if signals.suggested == action else f"suggests {signals.suggested} instead"
+        )
+        rationale += f" The top runbook section {agreement}."
+    return {
+        "diagnosis": diagnosis,
+        "action": str(action),
+        "target": service,
+        "rationale": rationale,
+    }
 
 
 def _estimate_usage(
